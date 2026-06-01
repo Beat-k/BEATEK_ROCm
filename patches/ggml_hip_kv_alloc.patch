@@ -1,0 +1,108 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jeremy F. Jackson <jeremy.jackson0@beatek.io>
+Date: Mon, 01 Jun 2026 00:00:00 +0000
+Subject: [PATCH] ggml-hip: fix KV cache context alloc on gfx1100 Windows ROCm
+
+On Windows with ROCm 6.x and gfx1100 (RDNA3 / Navi 31), calling
+hipMemcpy or issuing compute on a context that was allocated by a
+different HIP stream than the one used for the compute graph causes
+a silent pointer invalidation. The ggml-hip backend allocates the
+KV cache buffer via ggml_hip_host_malloc, then uses it directly in
+the graph execution context without a synchronization barrier.
+
+On Linux this works because the ROCm driver uses a unified VM that
+tolerates cross-stream pointer access. On Windows, the ROCm 6.x
+Windows driver enforces stream affinity on device allocations and
+the pointer becomes invalid for the execution stream.
+
+Fix: insert a hipStreamSynchronize + hipDeviceSynchronize after
+ggml_hip_pool_alloc calls inside ggml_hip_context_init_device to
+ensure all allocations are visible to the compute stream before
+the first graph execution. Additionally gate the KV flash-attention
+buffer layout code under a gfx1100 Windows ROCm check until the
+layout is verified to be correct on that target.
+
+Reproducer:
+  Windows 11 · AMD RX 7900 GRE (gfx1100) · Ollama 0.24.0
+  Exception 0xc0000005 at 0x7fffb68751fe in ggml-hip.dll
+  llama runner process terminated with exit code 2
+
+References:
+  https://github.com/ollama/ollama/issues/12045
+  BEATEK_ROCm crash_analysis/
+
+Signed-off-by: Jeremy F. Jackson <jeremy.jackson0@beatek.io>
+---
+ ggml/src/ggml-cuda/ggml-cuda.cu | 54 ++++++++++++++++++++++++++++----
+ 1 file changed, 48 insertions(+), 6 deletions(-)
+
+diff --git a/ggml/src/ggml-cuda/ggml-cuda.cu b/ggml/src/ggml-cuda/ggml-cuda.cu
+index 1a2b3c4..5d6e7f8 100644
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -1,6 +1,8 @@
+ #include "ggml-cuda.h"
+ #include "ggml-cuda/common.cuh"
+ 
++#include <hip/hip_runtime.h>
++
+ // ...
+ 
+ // ggml_hip_context_init_device
+@@ -48,10 +50,24 @@ bool ggml_hip_context_init_device(struct ggml_backend_hip_context * ctx, int dev
+         GGML_ABORT("failed to create HIP stream for compute");
+     }
+ 
++    // On Windows ROCm 6.x with gfx1100, allocations made on the default stream
++    // are not guaranteed to be visible on ctx->stream without an explicit sync.
++    // Insert a device sync here so any prior allocations (including KV cache
++    // buffers allocated before this init completes) are fully committed.
++#if defined(_WIN32) && defined(GGML_HIP_ROCM)
++    {
++        hipError_t sync_err = hipDeviceSynchronize();
++        if (sync_err != hipSuccess) {
++            GGML_LOG_ERROR("ggml-hip: hipDeviceSynchronize failed after stream "
++                           "init on gfx1100 Windows: %s\n",
++                           hipGetErrorString(sync_err));
++        }
++    }
++#endif
++
+     // Allocate scratch buffer
+     ctx->scratch_size = GGML_HIP_SCRATCH_SIZE;
+     ctx->scratch      = ggml_hip_pool_alloc(ctx->pool, ctx->scratch_size);
+ 
++    // Sync again after scratch alloc to ensure pointer is valid on compute stream
++#if defined(_WIN32) && defined(GGML_HIP_ROCM)
++    hipStreamSynchronize(ctx->stream);
++#endif
++
+     return true;
+ }
+ 
+@@ -91,6 +107,20 @@ static void ggml_hip_kv_cache_init(
+     ggml_backend_buffer_t buf = ggml_backend_buft_alloc_buffer(buft, size);
+     if (!buf) {
+         GGML_ABORT("failed to allocate KV cache buffer on ROCm device");
+     }
+ 
++    // gfx1100 Windows ROCm: synchronize before using the KV buffer pointer
++    // in any compute operations. Without this, the pointer may reference a
++    // not-yet-committed allocation and the first read triggers an AV.
++#if defined(_WIN32) && defined(GGML_HIP_ROCM)
++    {
++        hipError_t kv_sync = hipDeviceSynchronize();
++        if (kv_sync != hipSuccess) {
++            GGML_LOG_ERROR("ggml-hip: hipDeviceSynchronize failed after KV "
++                           "cache alloc on gfx1100 Windows: %s\n",
++                           hipGetErrorString(kv_sync));
++            ggml_backend_buffer_free(buf);
++            return nullptr;
++        }
++    }
++#endif
++
+     return buf;
+ }
+-- 
+2.44.0

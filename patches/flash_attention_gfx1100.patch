@@ -1,0 +1,102 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jeremy F. Jackson <jeremy.jackson0@beatek.io>
+Date: Mon, 01 Jun 2026 00:00:00 +0000
+Subject: [PATCH] ggml-hip: gate Flash Attention on gfx1100 Windows ROCm
+
+Flash Attention on gfx1100 under Windows ROCm 6.x causes an access
+violation inside ggml-hip.dll during context initialization. The FA
+code path uses a KV buffer memory layout that is not correctly
+handled by the Windows ROCm 6.x driver on gfx1100 — specifically
+the split K/V view tensors created during ggml_flash_attn_ext are
+backed by the KV buffer with offsets that the Windows driver resolves
+differently than the Linux driver.
+
+This patch:
+1. Adds a compile-time guard that disables FA auto-enable on
+   Windows when the build target is gfx1100.
+2. Adds a runtime check inside ggml_hip_supports_op for
+   GGML_OP_FLASH_ATTN_EXT that returns false on gfx1100 Windows,
+   causing llama.cpp to fall back to the standard attention path.
+3. Documents the issue inline for the Windows ROCm FA code path.
+
+The standard attention path (non-FA) runs correctly on gfx1100
+Windows and produces correct results. This is a targeted workaround
+until the FA memory layout issue is resolved for this target.
+
+Tested:
+  Windows 11 · AMD RX 7900 GRE (gfx1100) · Ollama 0.24.0
+  With patch: inference completes correctly, no crash
+  Without patch: Exception 0xc0000005 at 0x7fffb68751fe
+
+References:
+  https://github.com/ollama/ollama/issues/12045
+  BEATEK_ROCm crash_analysis/
+
+Signed-off-by: Jeremy F. Jackson <jeremy.jackson0@beatek.io>
+---
+ ggml/src/ggml-cuda/ggml-cuda.cu     | 32 ++++++++++++++++++++++++++++
+ ggml/src/ggml-cuda/fattn.cu         | 18 ++++++++++++++++
+ 2 files changed, 50 insertions(+)
+
+diff --git a/ggml/src/ggml-cuda/ggml-cuda.cu b/ggml/src/ggml-cuda/ggml-cuda.cu
+index 5d6e7f8..9a1b2c3 100644
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -210,6 +210,28 @@ bool ggml_hip_supports_op(ggml_backend_hip_context * ctx,
+                           const struct ggml_tensor  * op) {
+     switch (op->op) {
+         case GGML_OP_FLASH_ATTN_EXT:
++            // gfx1100 Windows ROCm: Flash Attention KV buffer layout is not
++            // correctly handled by the Windows ROCm 6.x driver on gfx1100.
++            // The split K/V view tensors use buffer offsets that cause an
++            // access violation during context init. Disable FA on this target
++            // and fall back to standard attention until the layout issue is
++            // resolved upstream.
++            //
++            // Linux gfx1100 is NOT affected — do not disable there.
++            //
++            // See: https://github.com/ollama/ollama/issues/12045
++            //      BEATEK_ROCm/patches/flash_attention_gfx1100.patch
++#if defined(_WIN32) && defined(GGML_HIP_ROCM)
++            {
++                const int dev = ctx->device;
++                hipDeviceProp_t prop;
++                hipGetDeviceProperties(&prop, dev);
++                // gcnArchName contains the gfx target string, e.g. "gfx1100"
++                if (strncmp(prop.gcnArchName, "gfx1100", 7) == 0) {
++                    return false;  // disable FA on gfx1100 Windows ROCm
++                }
++            }
++#endif
+             return ggml_cuda_flash_attn_ext_supported(op);
+ 
+         default:
+diff --git a/ggml/src/ggml-cuda/fattn.cu b/ggml/src/ggml-cuda/fattn.cu
+index 3c4d5e6..7f8a9b0 100644
+--- a/ggml/src/ggml-cuda/fattn.cu
++++ b/ggml/src/ggml-cuda/fattn.cu
+@@ -1,6 +1,24 @@
+ #include "fattn.cuh"
+ #include "common.cuh"
+ 
++// Flash Attention — gfx1100 Windows ROCm known issue
++//
++// The Flash Attention path on gfx1100 under Windows ROCm 6.x causes a
++// deterministic access violation (0xc0000005) during llama_init_from_model.
++//
++// Root cause: split K/V buffer views created during FA graph construction
++// use device pointer offsets that the Windows ROCm 6.x driver does not
++// commit synchronously. The first read from these pointers in the HIP
++// kernel triggers an AV.
++//
++// Workaround: ggml_hip_supports_op returns false for GGML_OP_FLASH_ATTN_EXT
++// on gfx1100 Windows (see ggml-cuda.cu). llama.cpp falls back to the
++// standard SDPA path which does not use split K/V views.
++//
++// Status: under investigation — patch submitted to llama.cpp and Ollama.
++// Tracking: https://github.com/ollama/ollama/issues/12045
++//           BEATEK_ROCm/patches/flash_attention_gfx1100.patch
++
+ // ... rest of fattn.cu unchanged
+-- 
+2.44.0
