@@ -1,14 +1,32 @@
-MIT License
+DUAL LICENSE
 
 Copyright (c) 2026 Jeremy F. Jackson · BEATEK Holdings, LLC
 Dallas, Texas · jeremy.jackson0@beatek.io
 
+This software is made available under a dual-license model. You may use this
+software under either of the following licenses, at your option:
+
+  1. MIT License (Non-Commercial / Open-Source Use)
+  2. BEATEK Commercial License (Commercial Use)
+
+You must comply with the terms of at least one of these licenses. If you use
+this software for any commercial purpose, you must obtain a Commercial License.
+
+---
+
+LICENSE 1 — MIT License (Non-Commercial / Open-Source Use)
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, merge, publish, distribute, and/or sublicense copies of the
+Software for non-commercial purposes only, subject to the following conditions:
+
+  • "Non-commercial" means use that is not primarily intended for or directed
+    toward commercial advantage or monetary compensation.
+  • Academic research, personal projects, and open-source contributions are
+    considered non-commercial under this license.
+  • Any distribution of this software or derivative works must retain this
+    full dual-license notice unchanged.
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
@@ -23,11 +41,28 @@ SOFTWARE.
 
 ---
 
+LICENSE 2 — BEATEK Commercial License
+
+For any commercial use of this software — including but not limited to:
+integration into commercial products or services, use within a for-profit
+organization, SaaS deployments, or any use generating direct or indirect
+revenue — a separate Commercial License is required.
+
+To obtain a Commercial License, contact:
+
+  Jeremy F. Jackson · BEATEK Holdings, LLC
+  jeremy.jackson0@beatek.io
+
+Commercial license terms, pricing, and scope are negotiated individually.
+Unauthorized commercial use of this software is a violation of copyright law.
+
+---
+
 PATENT NOTICE
 
 One or more inventions described in or related to this software are the subject
 of patent applications filed by BEATEK Holdings, LLC. Use of this software
-under the MIT License above does not grant any patent license, express or
+under either license above does not grant any patent license, express or
 implied, beyond what is required to practice the software as distributed here.
 
 For patent licensing inquiries contact: jeremy.jackson0@beatek.io

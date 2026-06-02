@@ -2,7 +2,7 @@
 DOMAIN:       beatek.project
 DOC_TYPE:     contribution.guide
 PLATFORM:     BEATEK_ROCm
-VERSION:      2026.06.01
+VERSION:      2026.06.02
 AUTHORITY:    draft
 COSIGN:       Jeremy F. Jackson (Jaxxon) · BEATEK Holdings LLC
 TRIBUNAL:     PENDING
@@ -148,12 +148,21 @@ merit and accuracy. Be precise, be correct, cite your sources.
 
 ## License
 
-By contributing you agree that your contributions are licensed under the
-MIT License in `LICENSE`. For patches submitted upstream to llama.cpp or
-Ollama, you additionally agree to those projects' contributor terms at the
-time of submission.
+This project uses a **dual license** — see `LICENSE` for full terms.
 
-See `LICENSE` for the full patent notice.
+- **Non-commercial / open-source contributions** are accepted under the
+  MIT license (License 1 in `LICENSE`).
+- **Commercial use** of any contributed code requires a separate Commercial
+  License from BEATEK Holdings, LLC (License 2 in `LICENSE`).
+
+By submitting a contribution you affirm that:
+1. Your contribution is your original work or you have the right to submit it.
+2. You grant BEATEK Holdings, LLC the right to use your contribution under
+   both the MIT and BEATEK Commercial licenses.
+3. For patches submitted upstream to llama.cpp or Ollama, you additionally
+   agree to those projects' contributor terms at the time of submission.
+
+See `LICENSE` for the full patent notice and dual-license terms.
 
 ---
 
