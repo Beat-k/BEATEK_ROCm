@@ -58,8 +58,8 @@ Both changes are gated on `#if defined(_WIN32)` and `gcnArchName` prefix check
 
 ## Validation
 
-**Hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11
-**ROCm:** 7.1
+**Hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11  
+**ROCm:** 7.1  
 **Build:** clang 21 / Ninja / VS 2026
 
 Before patch:
