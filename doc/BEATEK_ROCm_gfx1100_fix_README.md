@@ -1,8 +1,8 @@
 # BEATEK_ROCm
 ### gfx1100 Windows ROCm Crash Fix · Validated · June 2026
 
-**Owner:** Jeremy F. Jackson · BEATEK Holdings, LLC  
-**Hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11  
+**Owner:** Jeremy F. Jackson · BEATEK Holdings, LLC
+**Hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11
 **Status:** ✅ Fix validated — GPU inference confirmed at 108 t/s
 
 ---
@@ -21,9 +21,9 @@ resolves the crash completely.
 
 ## The Bug
 
-**Affected hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11  
-**Affected software:** Ollama 0.11.5+ on Windows · llama.cpp with ROCm/HIP  
-**Regression since:** approximately Ollama 0.11.5  
+**Affected hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11
+**Affected software:** Ollama 0.11.5+ on Windows · llama.cpp with ROCm/HIP
+**Regression since:** approximately Ollama 0.11.5
 **Ollama issue:** https://github.com/ollama/ollama/issues/12045
 
 ### Symptom
@@ -179,8 +179,9 @@ Always write with `System.Text.UTF8Encoding $false` — PowerShell's default
 
 ```
 BEATEK_ROCm/
-├── BEATEK_ROCm_README.md              ← This file (open source contribution doc)
+├── BEATEK_ROCm_gfx1100_fix_README.md  ← This file (open source contribution doc)
 ├── BEATEK_ROCm.md                     ← Platform doc (BEA_Aura_CDE_HV context)
+├── llama_cpp_PR_description.md        ← Ready-to-submit llama.cpp PR description
 ├── crash_analysis/
 │   ├── crash_log.txt                  ← Raw crash output from production
 │   ├── environment.md                 ← Driver, OS, Ollama version, GPU info
@@ -192,7 +193,7 @@ BEATEK_ROCm/
 ├── builds/
 │   ├── build_windows_rocm.md          ← Patched ROCm build for Windows gfx1100
 │   ├── build_windows_directml.md      ← Interim workaround — DirectML build
-│   └── build_linux_rocm.md           ← Reference build on Linux (known-working)
+│   └── build_linux_rocm.md            ← Reference build on Linux (known-working)
 └── tests/
     ├── kv_cache_alloc_test.py         ← HIP-level allocation isolation test
     └── gfx1100_inference_test.py      ← End-to-end llama-server validation
@@ -222,6 +223,6 @@ natively via Ollama at full GPU speed (~110 t/s vs ~4 t/s CPU fallback).
 
 ---
 
-*BEATEK Holdings, LLC · Jeremy F. Jackson · Dallas, Texas · © 2026*  
-*Patent Pending · jeremy.jackson0@beatek.io*  
+*BEATEK Holdings, LLC · Jeremy F. Jackson · Dallas, Texas · © 2026*
+*Patent Pending · jeremy.jackson0@beatek.io*
 *Validated: June 2, 2026 · Tag: beatek-rocm-validated-2026-06-02*

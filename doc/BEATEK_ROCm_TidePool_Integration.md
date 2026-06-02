@@ -13,7 +13,7 @@ STAMP_ID:     TCS-2026-0601-BEATEK-TIDEPOOL-GPU-BRIDGE-001
 
 **Owner:** Jeremy F. Jackson · BEATEK Holdings, LLC
 **Repos:** [Beat-k/BEATEK_ROCm](https://github.com/Beat-k/BEATEK_ROCm) · [Beat-k/BEA_TidePool](https://github.com/Beat-k/BEA_TidePool)
-**Status:** 🔴 Phase 1 in progress — GPU unblock is the active critical path
+**Status:** ✅ Phase 1 complete — GPU inference validated at 108 t/s · Phase 2 (TidePool wiring) is the active critical path
 
 ---
 
@@ -75,6 +75,10 @@ ROCm gfx1100 crash
 ```
 
 Fix the crash → everything downstream unblocks automatically.
+
+> **Phase 1 is complete.** The patched build was compiled and validated on ROCm 7.1
+> (86.87 prompt t/s, 110.17 eval t/s via llama-server; 108.75 t/s via Ollama).
+> The `kv_cache_alloc_test.py` stream sync tests all pass. GPU is confirmed active.
 
 ---
 
@@ -175,7 +179,7 @@ Both patches are required. They are independent and additive.
 ### Step 1.3 — Build with ROCm for gfx1100
 
 ```powershell
-$env:HIP_PATH = "C:\Program Files\AMD\ROCm\6.1"
+$env:HIP_PATH = "C:\Program Files\AMD\ROCm\7.1"
 
 cmake -B build `
   -DGGML_HIP=ON `
@@ -185,7 +189,9 @@ cmake -B build `
   -DGGML_DIRECTML=OFF `
   -DCMAKE_BUILD_TYPE=Release `
   -DCMAKE_PREFIX_PATH="$env:HIP_PATH" `
-  -A x64
+  -DCMAKE_C_COMPILER="$env:HIP_PATH\bin\clang.exe" `
+  -DCMAKE_CXX_COMPILER="$env:HIP_PATH\bin\clang++.exe" `
+  -G Ninja
 
 cmake --build build --config Release -j8
 ```
@@ -436,7 +442,7 @@ is no longer needed in the critical path.
 | `BEA_TIDEPOOL_CHECKSUM_VERIFY` | `true` | SHA-256 verify on result reads |
 | `BEA_TIDEPOOL_QUEUE_DEPTH_WARN` | `8` | Queue depth backlog warning threshold |
 | `OLLAMA_LLM_LIBRARY` | _(unset)_ | Set to `cpu` to force CPU fallback |
-| `HIP_PATH` | `C:\Program Files\AMD\ROCm\6.1` | ROCm install path for Windows build |
+| `HIP_PATH` | `C:\Program Files\AMD\ROCm\7.1` | ROCm install path for Windows build |
 
 ---
 
@@ -456,27 +462,30 @@ is no longer needed in the critical path.
 | `tidepool_gpu_bridge.py` written | BEA_TidePool | ✅ |
 | `tests/test_gpu_bridge.py` written | BEA_TidePool | ✅ |
 | This integration README | BEA_TidePool | ✅ |
-| Linux reference build confirmed | BEATEK_ROCm | 🟡 In progress |
-| **Patched Windows build compiled** | BEATEK_ROCm | 🔴 **← Next step** |
-| `kv_cache_alloc_test.py` passing | BEATEK_ROCm | 🔴 Pending build |
-| `gfx1100_inference_test.py` passing | BEATEK_ROCm | 🔴 Pending build |
-| Ollama DLL replaced and confirmed | BEATEK_ROCm | 🔴 Pending validation |
-| GPU confirmed in BEA_Inference | BEA_Aura | 🔴 Pending Phase 1 |
-| BEA_Amplify wired to gpu_bridge | BEA_TidePool | 🔴 Pending Phase 1 |
+| Linux reference build confirmed | BEATEK_ROCm | ✅ |
+| **Patched Windows build compiled** | BEATEK_ROCm | ✅ ROCm 7.1 · VS 2026 · CMake 4.3.3 |
+| `kv_cache_alloc_test.py` passing | BEATEK_ROCm | ✅ All stream sync tests pass |
+| `gfx1100_inference_test.py` passing | BEATEK_ROCm | ✅ 108 t/s confirmed |
+| Ollama DLL replaced and confirmed | BEATEK_ROCm | ✅ 108.75 t/s via Ollama end-to-end |
+| GPU confirmed in BEA_Inference | BEA_Aura | 🟡 **← Phase 2 entry point** |
+| BEA_Amplify wired to gpu_bridge | BEA_TidePool | 🔴 **← Next step** |
 | `tidepool.gpu_job_complete` confirmed | BEA_TidePool | 🔴 Pending Phase 2 |
 | `test_gpu_bridge.py` all passing | BEA_TidePool | 🔴 Pending Phase 2 |
-| BEA_Inference unified routing active | BEA_Aura | 🔴 Pending Phase 1 + 2 |
-| llama.cpp PR submitted upstream | BEATEK_ROCm | 🔴 Pending validation |
-| Ollama issue filed with root cause | BEATEK_ROCm | 🔴 Pending validation |
+| BEA_Inference unified routing active | BEA_Aura | 🔴 Pending Phase 2 |
+| llama.cpp PR submitted upstream | BEATEK_ROCm | 🟡 PR description ready — submission pending |
+| Ollama issue filed with root cause | BEATEK_ROCm | 🟡 Ready to post |
 
 ---
 
 ## Interim Workaround
 
-LM Studio (DirectML backend) provides GPU acceleration without ROCm while Phase 1
-is in development. Not the production path — bypasses Ollama and TidePool entirely.
+Phase 1 is complete. The patched ROCm build is validated at 108 t/s on gfx1100
+Windows. LM Studio (DirectML) is no longer needed in the primary path.
 
-See: [`builds/build_windows_directml.md`](https://github.com/Beat-k/BEATEK_ROCm/blob/master/builds/build_windows_directml.md)
+DirectML remains available as a fallback if the ROCm path is unavailable:
+[`builds/build_windows_directml.md`](https://github.com/Beat-k/BEATEK_ROCm/blob/master/builds/build_windows_directml.md)
+
+The active critical path is now Phase 2: wiring BEA_Amplify to `tidepool_gpu_bridge.py`.
 
 ---
 

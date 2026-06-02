@@ -50,22 +50,24 @@ Exception 0xc0000005 0x0 0x0 0x7fffb68751fe
 llama runner process has terminated with exit code 2
 ```
 
-### Root Cause (Working Theory)
+### Root Cause
 
-The crash occurs inside `ggml-hip.dll` during `llama_init_from_model` when
-the KV cache is being allocated on the GPU. The access violation at a fixed
-address (`0x7fffb68751fe`) suggests a null or invalid pointer dereference
-in the ROCm KV cache allocation path, specifically triggered by the
-interaction between:
+Two independent bugs compound on gfx1100 Windows ROCm:
 
-1. Flash Attention auto-enable (added in 0.11.5)
-2. gfx1100 KV cache memory layout on Windows ROCm 6.x
-3. The specific VRAM allocation pattern for the KV + compute buffers
+**Bug 1 — KV cache stream affinity:** On Windows ROCm, device memory allocated on
+the default HIP stream is not guaranteed visible on a separately created compute
+stream without an explicit sync. `ggml-hip` allocates the KV cache buffer via the
+pool allocator, then uses it directly on `ctx->stream` without a sync barrier.
+On Linux, ROCm unified VM tolerates this. On Windows the driver enforces stream
+affinity and the pointer is invalid at first access — producing the
+`0xc0000005` access violation at a deterministic address.
 
-The crash occurs even with `OLLAMA_FLASH_ATTENTION=false` in later testing,
-which suggests the Flash Attention flag is not the sole trigger — the
-underlying KV cache allocation code path was also changed in the same
-release window.
+**Bug 2 — Flash Attention memory layout:** FA creates split K/V view tensors backed
+by offsets into the KV buffer. On gfx1100 Windows this layout triggers a secondary
+fault even after the stream sync fix. The issue does not reproduce on Linux.
+
+Both bugs are confirmed and fixed. See `patches/beatek_rocm_HEAD.patch` — 35 lines,
+2 files, validated at 108.75 t/s (Ollama) and 110.17 t/s (llama-server).
 
 ---
 
@@ -78,7 +80,7 @@ release window.
 | GPU arch | gfx1100 (Navi 31) |
 | Driver | 60033.23 |
 | Ollama | 0.24.0 |
-| ROCm | 6.x (bundled in Ollama) |
+| ROCm | 7.1 (validated fix build) · 6.x (bundled crash env) |
 | llama.cpp | Ollama-bundled |
 | Models tested | mistral:7b · llama3.1:8b · qwen2.5:7b |
 
@@ -91,11 +93,17 @@ All models crash at the same address. CPU mode works correctly for all models.
 ```
 BEATEK_ROCm/
 ├── README.md                          ← This file
+├── BEATEK_ROCm.md                     ← Platform doc (BEA_Aura_CDE_HV context)
 ├── crash_analysis/
 │   ├── crash_log.txt                  ← Full stack trace from production
 │   ├── environment.md                 ← Exact environment details
-│   └── reproduction.md                ← Steps to reproduce
+│   └── reproduction.md               ← Steps to reproduce
+├── doc/
+│   ├── BEATEK_ROCm_gfx1100_fix_README.md  ← Validated fix summary (open source)
+│   ├── BEATEK_ROCm_TidePool_Integration.md ← GPU → TidePool integration playbook
+│   └── llama_cpp_PR_description.md    ← Ready-to-submit llama.cpp PR
 ├── patches/
+│   ├── beatek_rocm_HEAD.patch         ← Full validated patch (35 lines, 2 files)
 │   ├── ggml_hip_kv_alloc.patch        ← KV cache allocation fix
 │   └── flash_attention_gfx1100.patch  ← FA gating for gfx1100 Windows
 ├── builds/
@@ -205,21 +213,50 @@ Both patches are required for a reliable fix.
 
 | Project | Type | Target | Status |
 |---------|------|--------|--------|
-| llama.cpp | Pull Request | KV cache fix for gfx1100 Windows ROCm | 🟡 Patches written |
-| Ollama | Issue comment | Root cause analysis + patch reference | 🟡 Analysis complete |
+| llama.cpp | Pull Request | KV cache fix for gfx1100 Windows ROCm | 🟡 PR description ready — submission pending |
+| Ollama | Issue comment | Root cause analysis + patch reference | 🟡 Ready to post |
 | ROCm docs | Documentation | gfx1100 Windows known issues | 🔴 Pending |
+
+---
+
+## Validation Results
+
+**Hardware:** AMD Radeon RX 7900 GRE · gfx1100 · Windows 11
+**Build:** ROCm 7.1 · clang 21 · Ninja · VS 2026 · CMake 4.3.3
+
+```
+- ROCm0 : AMD Radeon RX 7900 GRE (16368 MiB, 16218 MiB free)
+- prompt eval: 86.87 tokens/s
+- eval:        110.17 tokens/s
+- total time:  245.94 ms / 22 tokens
+```
+
+Ollama end-to-end:
+```
+prompt eval rate: 108.75 tokens/s
+total duration:   1.34s
+```
+
+HIP allocation isolation test:
+```
+[PASS] KV buffer allocated at 0x304000000
+[PASS] hipDeviceSynchronize() OK
+[PASS] Memcpy to KV buffer via compute stream succeeded
+ALL STREAM SYNC TESTS PASSED
+```
 
 ---
 
 ## Current Workaround
 
-While the patched build is being compiled and tested, GPU inference on Windows
-uses DirectML via LM Studio (`build_windows_directml.md`). This bypasses
-ROCm entirely and works correctly on gfx1100 (~20–30 tok/s vs ~40+ tok/s
-expected with ROCm).
+The patched ROCm build (`patches/beatek_rocm_HEAD.patch`) is validated and
+running at 108 t/s on gfx1100 Windows ROCm 7.1. See `builds/build_windows_rocm.md`
+for build instructions including required ROCm 7.1 + VS 2026 header patches.
 
-Long term: Linux ROCm (BEA_Lace_OS) will own GPU inference when BEA Aura
-Console hardware provides correct PCIe topology for passthrough.
+While the llama.cpp PR is pending, the interim path for GPU inference uses
+the patched standalone llama-server binary. DirectML via LM Studio remains
+available as a fallback (`build_windows_directml.md`), but is no longer
+needed in the primary path.
 
 ---
 

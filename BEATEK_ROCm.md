@@ -14,7 +14,7 @@ STAMP_ID:     TCS-2026-0601-BEATEK-ROCM-README-001
 
 **Owner:** Jeremy F. Jackson · BEATEK Holdings, LLC
 **Hardware:** AMD Radeon RX 7900 GRE · gfx1100
-**Status:** 🔴 In Progress — crash documented, fix in development
+**Status:** ✅ Fix validated — GPU inference at 108 t/s on gfx1100 Windows ROCm 7.1
 
 ---
 
@@ -80,14 +80,19 @@ correctly, just slowly (~4–60s per generation vs. ~1–3s on GPU).
 ```
 BEATEK_ROCm/
 ├── BEATEK_ROCm.md                     ← Platform doc (BEA_Aura_CDE_HV context)
-├── BEATEK_ROCm_README.md              ← Open source contribution README
+├── README.md                          ← Open source contribution README
 ├── BEATEK_ROCm_crash_log.txt          ← Raw crash output captured from production
 ├── crash_analysis/
 │   ├── BEATEK_ROCm_crash_log.txt      ← Full stack trace (crash_analysis copy)
 │   ├── BEATEK_ROCm_README.md          ← Crash analysis detail doc
 │   ├── environment.md                 ← Driver, OS, Ollama version, GPU info
 │   └── reproduction.md               ← Exact steps to reproduce from scratch
+├── doc/
+│   ├── BEATEK_ROCm_gfx1100_fix_README.md  ← Validated fix summary (open source)
+│   ├── BEATEK_ROCm_TidePool_Integration.md ← GPU → TidePool integration playbook
+│   └── llama_cpp_PR_description.md    ← Ready-to-submit llama.cpp PR
 ├── patches/
+│   ├── beatek_rocm_HEAD.patch         ← Full validated patch (35 lines, 2 files)
 │   ├── ggml_hip_kv_alloc.patch        ← KV cache stream sync fix for gfx1100 Windows
 │   └── flash_attention_gfx1100.patch  ← FA runtime gate on gfx1100 Windows ROCm
 ├── builds/
@@ -149,6 +154,7 @@ Windows the driver enforces stream affinity and the pointer is invalid.
 The patch inserts `hipDeviceSynchronize()` + `hipStreamSynchronize(stream)`
 after KV cache and scratch buffer allocation inside `ggml_hip_context_init_device`.
 This commits all allocations to the device before the compute stream touches them.
+Validated on ROCm 7.1 — 86.87 prompt t/s, 110.17 eval t/s.
 
 **`flash_attention_gfx1100.patch` — The Safety Gate**
 
@@ -180,8 +186,8 @@ It runs 3 consecutive requests to confirm stability under load.
 
 | Project | Action | Status |
 |---------|--------|--------|
-| **llama.cpp** | PR — gfx1100 Windows KV cache fix in `ggml-hip` | 🟡 Patches written, build pending |
-| **Ollama** | Issue comment — root cause analysis + patch reference | 🟡 Analysis complete, comment pending |
+| **llama.cpp** | PR — gfx1100 Windows KV cache fix in `ggml-hip` | 🟡 PR description ready — submission pending |
+| **Ollama** | Issue comment — root cause analysis + patch reference | 🟡 Ready to post |
 | **ROCm Docs** | gfx1100 Windows known issues + workaround section | 🔴 Pending write-up |
 
 ---
@@ -264,10 +270,10 @@ for automated validation of the fix.
 | `kv_cache_alloc_test.py` written | ✅ Complete |
 | `gfx1100_inference_test.py` written | ✅ Complete |
 | Build docs written (Windows + Linux) | ✅ Complete |
-| Linux reference build confirmed working | 🟡 In progress |
-| Patched Windows build compiled and tested | 🔴 Pending |
-| llama.cpp PR submitted | 🔴 Pending |
-| Ollama issue filed with root cause | 🔴 Pending |
+| Linux reference build confirmed working | ✅ Complete |
+| Patched Windows build compiled and tested | ✅ Complete — 108 t/s · ROCm 7.1 · VS 2026 · CMake 4.3.3 |
+| llama.cpp PR submitted | 🟡 PR description ready — submission pending |
+| Ollama issue filed with root cause | 🟡 Pending |
 
 ---
 
