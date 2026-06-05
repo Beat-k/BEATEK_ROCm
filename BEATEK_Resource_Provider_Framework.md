@@ -89,11 +89,19 @@ BEATEK is that layer.
 
 | Component | Result |
 |---|---|
-| gfx1100 Windows ROCm fix | 110 t/s · exit code 2 eliminated |
-| BEA_TidePool VRAM Architecture | Coral TPU + RX 7900 GRE sharing VRAM over PCIe |
-| Dispatch latency | ~3000ms (NVMe) → ~5ms (VRAM) |
+| gfx1100 Windows ROCm fix | exit code 2 eliminated · production stable |
+| ROCm Benchmark — Run 1 | 66.5 t/s avg · 83.4 t/s peak · 3.01s avg latency |
+| ROCm Benchmark — Run 2 | 65.2 t/s avg · 83.3 t/s peak · 3.07s avg latency |
+| Layers offloaded | 33/33 fully GPU · ngl 99 |
+| Model | Mistral 7B Instruct v0.3 Q4_K_M |
+| Coral TPU | Low-power edge classifier · independent SRAM cache · NVMe page filing via BEA_TidePool |
 | Test suite | 91 passed |
-| Stack | RX 7900 GRE · Coral Dual Edge TPU · ROCm 7.1 · Windows 11 |
+| Stack | AMD RX 7900 GRE 16GB · gfx1100 · ROCm 7.1 · Windows 11 · AMD Ryzen 7 5700X3D · 64GB RAM |
+
+**BEATEK ROCm patch applied:**
+- KV cache stream affinity (ggml-cuda.cu)
+- Flash Attention gate for gfx1100 Windows (common.cuh)
+- Without fix: exit code 2 crash on every request
 
 Full documentation: https://github.com/Beat-k/BEATEK_ROCm
 
