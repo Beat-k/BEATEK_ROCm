@@ -11,12 +11,12 @@ Every layer of modern compute has a category of company that owns it:
 
 | Resource | Providers |
 |---|---|
-| CPU Resource Providers | AMD · Intel |
-| GPU Resource Providers | AMD · NVIDIA · Intel |
-| NPU Resource Providers | Intel |
+| CPU Resource Providers | AMD · Intel · Apple |
+| GPU Resource Providers | AMD · NVIDIA · Intel · Apple |
+| NPU Resource Providers | Intel · Qualcomm · Apple |
 | TPU Resource Providers | Google · Qualcomm · Apple |
 | Memory Resource Providers | Samsung · Micron · SK Hynix |
-| **Intelligence Resource Provider** | **BEATEK** |
+| **Intelligence Resource Providers** | **BEATEK · Sony · Microsoft · Nintendo · Amazon · Apple · Dell · HP · Lenovo** |
 
 ---
 
@@ -51,6 +51,10 @@ The Intelligence Resource Provider makes them one system —
 sharing memory, dispatching jobs, running inference —
 as a single coherent platform.
 
+Every company in the Intelligence Resource Providers row takes silicon
+from the rows above and makes it think. The silicon does not change.
+What changes is what you do with it.
+
 ---
 
 ## Why This Category Didn't Exist Before
@@ -71,7 +75,7 @@ BEATEK built on it the day it became possible.
 
 ## BEATEK's Position
 
-BEATEK does not compete with AMD, NVIDIA, Google, Intel, or Samsung.
+BEATEK does not compete with AMD, NVIDIA, Google, Intel, Apple, or Samsung.
 BEATEK completes them.
 
 Every chip they manufacture becomes more valuable when an Intelligence
