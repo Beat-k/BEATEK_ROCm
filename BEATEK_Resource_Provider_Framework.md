@@ -85,6 +85,37 @@ BEATEK is that layer.
 
 ---
 
+## Community Validation — June 5, 2026
+
+**Platform:** AMD Developer Community · ROCm Developers → Getting Started
+**Thread:** Validated fix for gfx1100 Windows ROCm inference crash + VRAM-based heterog
+
+Third-party validation from Jillian_Taylor (AI researcher) — gfx1101 · RX 7700 XT · Ubuntu 24.04 6.08 kernel.
+BEATEK fix applied to a different GPU architecture and a different operating system. Fix held.
+
+**Training results — Qwen2.5-3B QLoRA · mixed-proficiency-v1 · 1007 samples:**
+
+| Date | State | Epochs | Runtime (s) | Steps/sec | Samples/sec | Final Loss | Stability |
+|---|---|---|---|---|---|---|---|
+| 2026-05-30 | Pre-fix | 13.33 | ~1800 | unstable | unstable | n/a | stalls · jitter · hipBLASLt warnings |
+| 2026-05-30 | Pre-fix | 13.33 | 635.7 | 0.315 | 2.517 | 0.4687 | completed but unstable throughput |
+| 2026-06-06 | Post-fix | 2 | 829.9 | 0.304 | 2.427 | 1.509 | fully stable · no ROCm errors |
+| 2026-06-06 | Post-fix | 13.33 | 635.7 | 0.315 | 2.517 | 0.4687 | fully stable · clean long run |
+
+> *"I tested your fix with a short epoch run (2) followed by a full training run. I pulled up numbers from pre-fix for comparison. This completely stabilized the training environment! Thank you so much for sharing your work."*
+> — Jillian_Taylor · AMD Developer Community · June 5, 2026
+
+**BEATEK response:**
+> *"Satisfaction guaranteed. I'm happy BEATEK services was able to assist. We will continue working on ROCm and HIP for future developments and will be happy to share."*
+> — Jax_Jaxxon · June 5, 2026
+
+**Cross-architecture confirmation:**
+- Fix authored on: gfx1100 · RX 7900 GRE · Windows 11
+- Fix validated on: gfx1101 · RX 7700 XT · Ubuntu 24.04
+- Result: stable on both architectures · both operating systems
+
+---
+
 ## Validated Production Stack — June 5, 2026
 
 ### GPU Layer — AMD RX 7900 GRE · ROCm gfx1100
